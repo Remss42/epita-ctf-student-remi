@@ -32,14 +32,3 @@ J'ai d'abord compilé le Drainer puis je l'ai déployé avec mon compte MetaMask
 
 L'attaque a marché parce que le créateur du `FairCasino` n'avait pas vraiment de code secret : tout était devinable et calculable.
 
-## Étapes franchies
-
-- [x] Configuration de l'environnement et fork du dépôt
-- [x] Déploiement du contrat d'exploitation sur Sepolia
-- [x] Vérification du code source du contrat d'exploitation sur l'explorateur de bloc
-- [x] Tentative d'interaction avec le contrat cible
-- [x] Validation effective de l'accès au contrat cible
-- [x] Tentative de déclenchement du flux de sortie des fonds
-- [x] Déclenchement réussi d'un flux de sortie de fonds depuis la cible
-- [x] Exécution de la distribution des fonds selon le schéma imposé
-- [x] Rédaction et intégration du rapport d'audit
